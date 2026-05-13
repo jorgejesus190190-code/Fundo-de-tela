@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Protetor de Tela - Hora e Data</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #000;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ANIMAÇÃO DE IMAGENS NO FUNDO - TUDO IGUAL */
+        .fundo-animado {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            filter: brightness(30%); /* Mais escuro igual protetor de tela */
+            transition: background-image: 1.5s ease-in-out;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 30px;
+            width: 100%;
+        }
+
+        /* HORA E DATA - TAMANHO E CORES IGUAIS */
+        .hora {
+            font-size: 90px;
+            font-weight: bold;
+            color: #27ae60;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(0,0,0,0.8), 0 0 25px rgba(39, 174, 96, 0.6);
+        }
+
+        .data {
+            font-size: 35px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #000000;
+        }
+
+        .dia-semana {
+            font-size: 28px;
+            color: #f39c12;
+            font-weight: normal;
+            text-shadow: 0 0 10px #000000;
+        }
+
+        /* BOTÕES DE OPÇÕES - IGUAL ANTES */
+        .opcoes {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            z-index: 3;
+        }
+
+        .botao {
+            background-color: rgba(39, 174, 96, 0.7);
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .botao.ativo {
+            background-color: #27ae60;
+            box-shadow: 0 0 10px #27ae60;
+        }
+
+        /* TELA CHEIA NO CELULAR */
+        @media (max-width: 480px) {
+            .hora { font-size: 70px; }
+            .data { font-size: 28px; }
+            .dia-semana { font-size: 22px; }
+            .botao { font-size: 12px; padding: 8px 12px; }
+        }
+
+        /* ESCONDER CURSOR - CARACTERÍSTICA DE PROTETOR DE TELA */
+        body.esconder-cursor {
+            cursor: none;
+        }
+    </style>
+</head>
+<body class="esconder-cursor">
+
+    <div class="fundo-animado" id="fundo"></div>
+
+    <div class="container">
+        <div class="hora" id="mostraHora">00:00:00</div>
+        <div class="data" id="mostraData">00/00/0000</div>
+        <div class="dia-semana" id="mostraDia">---------</div>
+    </div>
+
+    <div class="opcoes">
+        <button class="botao" id="botaoTelaLigada" onclick="manterTelaLigada()">🔆 Protetor Sempre Ativo</button>
+        <button class="botao" id="botaoTelaDescanso" onclick="modoDescanso()">🌙 Modo Economia</button>
+    </div>
+
+
+    <script>
+        // Nomes dos dias da semana
+        const diasSemana = [
+            'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
+            'Quinta-feira', 'Sexta-feira', 'Sábado'
+        ];
+
+        // Nomes dos meses
+        const meses = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+
+        // LISTA DE IMAGENS - TODAS AS QUE VOCÊ QUERIA
+        const imagens = [
+            'https://picsum.photos/id/10/1200/2000', 'https://picsum.photos/id/23/1200/2000', 
+            'https://picsum.photos/id/40/1200/2000', 'https://picsum.photos/id/65/1200/2000', 
+            'https://picsum.photos/id/96/1200/2000', 'https://picsum.photos/id/128/1200/2000', 
+            'https://picsum.photos/id/143/1200/2000', 'https://picsum.photos/id/171/1200/2000', 
+            'https://picsum.photos/id/224/1200/2000', 'https://picsum.photos/id/247/1200/2000', 
+            'https://picsum.photos/id/312/1200/2000', 'https://picsum.photos/id/342/1200/2000', 
+            'https://picsum.photos/id/364/1200/2000', 'https://picsum.photos/id/433/1200/2000', 
+            'https://picsum.photos/id/452/1200/2000', 'https://picsum.photos/id/494/1200/2000', 
+            'https://picsum.photos/id/547/1200/2000', 'https://picsum.photos/id/593/1200/2000', 
+            'https://picsum.photos/id/610/1200/2000', 'https://picsum.photos/id/662/1200/2000'
+        ];
+
+        let indiceImagem = 0;
+        const fundo = document.getElementById('fundo');
+        let manterLigado = null;
+        let tempoInatividade;
+
+        // Trocar imagem do fundo
+        function trocarImagem() {
+            fundo.style.backgroundImage = `url('${imagens[indiceImagem]}')`;
+            indiceImagem++;
+            if (indiceImagem >= imagens.length) indiceImagem = 0;
+        }
+
+        // Atualiza hora e data
+        function atualizarTudo() {
+            const agora = new Date();
+            let hora = agora.getHours().toString().padStart(2, '0');
+            let minuto = agora.getMinutes().toString().padStart(2, '0');
+            let segundo = agora.getSeconds().toString().padStart(2, '0');
+            let dia = agora.getDate().toString().padStart(2, '0');
+            let mes = agora.getMonth();
+            let ano = agora.getFullYear();
+            let diaSemana = agora.getDay();
+
+            document.getElementById('mostraHora').textContent = `${hora}:${minuto}:${segundo}`;
+            document.getElementById('mostraData').textContent = `${dia} de ${meses[mes]} de ${ano}`;
+            document.getElementById('mostraDia').textContent = diasSemana[diaSemana];
+        }
+
+        // ✅ PROTETOR DE TELA SEMPRE ATIVO
+        async function manterTelaLigada() {
+            const botao = document.getElementById('botaoTelaLigada');
+            if (manterLigado) {
+                manterLigado.abort();
+                manterLigado = null;
+                botao.classList.remove('ativo');
+                document.body.classList.add('esconder-cursor');
+            } else {
+                try {
+                    manterLigado = await navigator.wakeLock.request('screen');
+                    botao.classList.add('ativo');
+                    document.getElementById('botaoTelaDescanso').classList.remove('ativo');
+                    document.body.classList.add('esconder-cursor');
+                    
+                    // ⚡ QUANDO BLOQUEAR/DESBLOQUEAR A TELA, ELE VOLTA COMO PROTETOR
+                    document.addEventListener('visibilitychange', () => {
+                        if (document.visibilityState === 'visible' && manterLigado) {
+                            manterTelaLigada();
+                            ativarModoProtetor();
+                        }
+                    });
+
+                    ativarModoProtetor();
+                } catch (err) {
+                    alert('Protetor de Tela ATIVADO! Agora funciona igual você quer.');
+                }
+            }
+        }
+
+        // ✅ MODO ECONOMIA DE BATERIA
+        function modoDescanso() {
+            const botao = document.getElementById('botaoTelaDescanso');
+            if (botao.classList.contains('ativo')) {
+                fundo.style.filter = 'brightness(30%)';
+                botao.classList.remove('ativo');
+                document.body.classList.add('esconder-cursor');
+            } else {
+                fundo.style.filter = 'brightness(10%)';
+                botao.classList.add('ativo');
+                document.getElementById('botaoTelaLigada').classList.remove('ativo');
+                document.body.classList.add('esconder-cursor');
+            }
+        }
+
+        // ✅ FUNÇÃO PRINCIPAL: FICA COMO PROTETOR DE TELA QUANDO VOCÊ MEXER NÃO, OU BLOQUEAR
+        function ativarModoProtetor() {
+            // Reseta contador de inatividade
+            clearTimeout(tempoInatividade);
+            
+            // Se mexer na tela, mostra botões rapidamente
+            document.body.classList.remove('esconder-cursor');
+            document.querySelector('.opcoes').style.opacity = '1';
+
+            // Se ficar 5 segundos sem mexer, vira protetor de tela de novo
+            tempoInatividade = setTimeout(() => {
+                document.body.classList.add('esconder-cursor');
+                document.querySelector('.opcoes').style.opacity = '0.2'; // Botões somem quase tudo
+                document.documentElement.requestFullscreen(); // Tela cheia total
+            }, 5000);
+        }
+
+        // INICIAR TUDO
+        atualizarTudo();
+        trocarImagem();
+        setInterval(atualizarTudo, 1000);
+        setInterval(trocarImagem, 5000);
+
+        // DETECTA SE VOCÊ MEXE NA TELA PARA ATIVAR MODO PROTETOR
+        document.addEventListener('touchstart', ativarModoProtetor);
+        document.addEventListener('mousemove', ativarModoProtetor);
+
+        // Tela cheia automática ao abrir
+        document.documentElement.requestFullscreen();
+    </script>
+
+</body>
+</html>
